@@ -3,41 +3,25 @@ from urllib import request
 import os
 import pandas as pd
 
-base_path = r"BASE_DIRECTORY"
-
-sample_path = os.path.join(base_path, "Sample Info.tsv")
-download_path  = os.path.join(base_path, "Download Links.tsv")
-
-database_path = os.path.join(base_path, "Database")
-
-sample_sheet = pd.read_csv(sample_path, delimiter="\t", usecols=["sample_id", "subject_id"])
-download_sheet = pd.read_csv(download_path, delimiter="\t", usecols=["sample_id", "urls"])
+meta_data = pd.read_csv("sample_metadata.csv")
+subject_ids = meta_data["Source Name"].to_numpy()
+conditions = meta_data["Factor Value[diagnosis]"].to_numpy()
 
 
-print("Downloading Files")
-cnt = 1
-for i in sample_sheet.index:
+print(conditions)
 
-    if download_sheet["urls"][i] == "Private: Data not accessible via the HMP DACC.":
-        pass
+base_path = r"sample_data" ###Change this
 
-    else:
+for  id, subject in enumerate(subject_ids):
+    url_download = "https://s3.amazonaws.com/openneuro/ds000030/ds000030_R1.0.5/uncompressed/sub-{0}/func/sub-{0}_task-rest_bold.nii.gz".format(subject)
+    
+    condition = conditions[id]
+    condition_path = os.path.join("sample_data",condition)
 
-        try:
-            temp_subject_id = sample_sheet["subject_id"][i]
-            temp_sample_id = sample_sheet["sample_id"][i]
-            final_path = os.path.join(database_path, temp_subject_id)
+    if not os.path.exists(condition_path):
+        os.makedirs(condition_path)
+    
+    final_path = os.path.join(condition_path, "{0}.nii.gz".format(subject))
+    request.urlretrieve(url_download, final_path)
 
-            if not os.path.exists(final_path):
-                os.makedirs(final_path)
-
-            url_download = download_sheet["urls"][i]
-
-            request.urlretrieve(url_download, final_path + "\\" + temp_sample_id + "fastq.gz") ##Change to .fna as some diseases (i.e. Type 2 Diabeties are in fasta format)
-            print("Sample " + str(cnt) + " downloaded")
-            cnt += 1
-
-        except:
-            print(temp_sample_id)
-
-print("Files downloaded")
+    
